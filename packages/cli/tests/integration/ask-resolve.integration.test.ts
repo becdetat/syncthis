@@ -62,6 +62,8 @@ async function runGit(cwd: string, args: string[], env?: Record<string, string>)
 }
 
 async function setupIdentity(dir: string): Promise<void> {
+  // Pin line endings so results do not depend on the machine's git config
+  await runGit(dir, ['config', 'core.autocrlf', 'false']);
   await runGit(dir, ['config', 'user.name', 'Test User']);
   await runGit(dir, ['config', 'user.email', 'test@example.com']);
   await runGit(dir, ['config', 'commit.gpgsign', 'false']);
@@ -74,7 +76,15 @@ async function initBareRemote(remote: string): Promise<void> {
 }
 
 async function cloneRepo(remote: string, dest: string): Promise<void> {
-  await execa('git', ['clone', '--branch', 'main', `file://${remote}`, dest]);
+  await execa('git', [
+    'clone',
+    '-c',
+    'core.autocrlf=false',
+    '--branch',
+    'main',
+    `file://${remote}`,
+    dest,
+  ]);
 }
 
 interface TestSetup {

@@ -48,6 +48,7 @@ async function setupGitRepoWithRemote(): Promise<void> {
 
   // Work repo with explicit branch name (avoids master/main ambiguity)
   await git(['-C', workDir, 'init', '-b', 'main']);
+  await git(['-C', workDir, 'config', 'core.autocrlf', 'false']);
   await git(['-C', workDir, 'config', 'user.name', 'Test User']);
   await git(['-C', workDir, 'config', 'user.email', 'test@example.com']);
   await git(['-C', workDir, 'remote', 'add', 'origin', `file://${remoteDir}`]);

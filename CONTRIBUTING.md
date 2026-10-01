@@ -39,6 +39,8 @@ npm install
 
 For project structure, available scripts, and the tech stack, see [docs/Development.md](docs/Development.md).
 
+On Windows, see [Line endings](docs/Development.md#line-endings-windows) for the one-time renormalise of existing clones.
+
 ## Commit Messages
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/). Keep the subject line concise:

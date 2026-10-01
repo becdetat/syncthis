@@ -1,0 +1,13 @@
+# Normalise text files to LF in the index and the working tree on every platform.
+* text=auto eol=lf
+
+# Binary files: never touch
+*.png binary
+*.gif binary
+*.icns binary
+*.woff2 binary
+*.ico binary
+
+# Windows scripts need CRLF (none committed yet)
+*.cmd text eol=crlf
+*.bat text eol=crlf

@@ -29,6 +29,25 @@ npm run test
 npm run lint:fix
 ```
 
+## Line endings (Windows)
+
+The repo enforces LF via `.gitattributes`. On a Windows clone made before that file existed (or with `core.autocrlf=true`), renormalise once so the working tree matches the index and Biome stops reporting formatter errors:
+
+```sh
+git stash            # keep local changes safe
+git add --renormalize .
+git commit           # only if git reports renormalised files; otherwise skip
+git stash pop
+```
+
+Or, on a clean tree, discard and re-checkout everything:
+
+```sh
+git rm --cached -r . && git reset --hard
+```
+
+Verify with `git ls-files --eol` (text files should report `w/lf`). Tests that `git init` temp repos set `core.autocrlf=false` locally, so they do not depend on your git config. Product code takes no line-ending stance: synced folders are user data.
+
 ## Project Structure
 
 ```

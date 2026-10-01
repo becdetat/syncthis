@@ -150,6 +150,7 @@ describe('handleInit --clone', () => {
     await mkdir(seedDir, { recursive: true });
     const seedGit = simpleGit(seedDir);
     await seedGit.raw(['init', '-b', 'main']);
+    await seedGit.addConfig('core.autocrlf', 'false');
     await seedGit.addConfig('user.name', 'Test');
     await seedGit.addConfig('user.email', 'test@test.com');
     await writeFile(join(seedDir, 'README.md'), '# repo\n', 'utf8');
