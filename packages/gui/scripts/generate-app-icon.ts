@@ -6,14 +6,16 @@
  *   icon.png          — 1024×1024 master PNG
  *   icon.icns         — macOS app icon (requires iconutil, macOS only)
  *   icons/icon-N.png  — 16, 32, 64, 128, 256, 512, 1024 px PNGs
+ *   icon.ico          — Windows app icon (16, 24, 32, 48, 64, 128, 256 px)
  *
  * Run: npx tsx packages/gui/scripts/generate-app-icon.ts
  */
 
 import { execSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pngToIco from 'png-to-ico';
 import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -23,6 +25,7 @@ const ICONS_DIR = join(RESOURCES_DIR, 'icons');
 
 const ACCENT = '#4A7BDB';
 const SIZES = [16, 32, 64, 128, 256, 512, 1024];
+const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
 
 // ---------------------------------------------------------------------------
 // SVG composition
@@ -79,6 +82,16 @@ async function main(): Promise<void> {
   for (const size of SIZES) {
     await renderPng(svg, size, join(ICONS_DIR, `icon-${size}.png`));
   }
+
+  // Windows .ico (rendered from the SVG directly so each size is crisp)
+  console.log('\n[ico]');
+  const icoPngs = await Promise.all(
+    ICO_SIZES.map((size) =>
+      sharp(Buffer.from(svg), { density: 300 }).resize(size, size).png().toBuffer(),
+    ),
+  );
+  writeFileSync(join(RESOURCES_DIR, 'icon.ico'), await pngToIco(icoPngs));
+  console.log(`  ✓ icon.ico  (${ICO_SIZES.join(', ')})`);
 
   // macOS .icns via iconutil
   if (process.platform === 'darwin') {

@@ -20,6 +20,11 @@ function createDashboardWindow(): BrowserWindow {
         ? path.join(process.resourcesPath, 'icon.png')
         : path.join(__dirname, '..', '..', 'resources', 'icon.png'),
     }),
+    ...(process.platform === 'win32' && {
+      icon: app.isPackaged
+        ? path.join(process.resourcesPath, 'icon.ico')
+        : path.join(__dirname, '..', '..', 'resources', 'icon.ico'),
+    }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

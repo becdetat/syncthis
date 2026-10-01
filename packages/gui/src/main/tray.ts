@@ -1,8 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { app, BrowserWindow, dialog, Menu, nativeImage, nativeTheme, screen, Tray } from 'electron';
 import { determineHealth } from '../../../cli/src/health-check.js';
 import { stopService } from './cli-bridge.js';
 import { readRegistry } from './ipc.js';
+import { parseTaskbarTheme, type TaskbarTheme } from './taskbar-theme.js';
 import { openDashboard } from './windows.js';
 
 declare const POPOVER_VITE_DEV_SERVER_URL: string;
@@ -10,6 +12,7 @@ declare const POPOVER_VITE_NAME: string;
 
 let tray: Tray | null = null;
 let popoverWindow: BrowserWindow | null = null;
+let currentState: 'idle' | 'syncing' | 'unhealthy' = 'idle';
 let syncingAnimTimer: ReturnType<typeof setInterval> | null = null;
 
 const SYNCING_FRAMES = 8;
@@ -21,11 +24,54 @@ function getTrayIconDir(): string {
     : path.join(__dirname, '..', '..', 'resources', 'tray');
 }
 
+let cachedTaskbarTheme: TaskbarTheme | null = null;
+
+/**
+ * Windows taskbar theme (independent of the app theme), read from the registry
+ * and cached. Defaults to dark if it cannot be read.
+ *
+ * TODO: after an Electron upgrade past 33.2.0, replace this with
+ * `nativeTheme.shouldUseDarkColorsForSystemIntegratedUI`.
+ */
+function getTaskbarTheme(): TaskbarTheme {
+  if (cachedTaskbarTheme) return cachedTaskbarTheme;
+  let theme: TaskbarTheme | null = null;
+  try {
+    const out = execFileSync(
+      'reg',
+      [
+        'query',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize',
+        '/v',
+        'SystemUsesLightTheme',
+      ],
+      { encoding: 'utf8', windowsHide: true, timeout: 3000 },
+    );
+    theme = parseTaskbarTheme(out);
+  } catch {
+    // fall through to default
+  }
+  cachedTaskbarTheme = theme ?? 'dark';
+  return cachedTaskbarTheme;
+}
+
+/** Re-read the taskbar theme and refresh the current tray icon. */
+function onSystemThemeUpdated(): void {
+  if (process.platform !== 'win32') return;
+  cachedTaskbarTheme = null;
+  updateTrayIcon(currentState);
+}
+
 function getTrayIconPath(state: 'idle' | 'syncing' | 'unhealthy', frame?: number): string {
   const dir = getTrayIconDir();
   const frameSuffix = frame !== undefined ? `-${frame}` : '';
   if (process.platform === 'linux') {
     return path.join(dir, `tray-${state}${frameSuffix}.png`);
+  }
+  if (process.platform === 'win32') {
+    // White glyphs for a dark taskbar, near-black for a light one.
+    const variant = getTaskbarTheme() === 'light' ? 'dark' : 'white';
+    return path.join(dir, `tray-${state}${frameSuffix}-${variant}.png`);
   }
   return path.join(dir, `tray-${state}${frameSuffix}Template.png`);
 }
@@ -77,6 +123,7 @@ export function createTray(): void {
   const iconPath = getTrayIconPath('idle');
   tray = new Tray(nativeImage.createFromPath(iconPath));
   tray.setToolTip('syncthis');
+  nativeTheme.on('updated', onSystemThemeUpdated);
 
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Dashboard', click: () => openDashboard() },
@@ -192,6 +239,7 @@ function positionPopover(): void {
 }
 
 export function updateTrayIcon(state: 'idle' | 'syncing' | 'unhealthy'): void {
+  currentState = state;
   if (!tray) return;
 
   // Stop any running animation

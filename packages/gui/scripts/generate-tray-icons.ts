@@ -5,6 +5,8 @@
  * Outputs to packages/gui/resources/tray/:
  *   macOS template images — monochrome black, 22×22 @1x and 44×44 @2x
  *   Linux standard icons  — colored, 24×24
+ *   Windows icons         — white (dark taskbar) and near-black (light taskbar),
+ *                           16×16 and 32×32 (@2x), red badge when unhealthy
  *   Syncing animation     — 8 rotated frames per size variant
  *
  * Run: npx tsx packages/gui/scripts/generate-tray-icons.ts
@@ -46,10 +48,9 @@ function compensateStroke(svg: string, contentSize: number): string {
 
 /**
  * Append a small filled-circle badge in the lower-right of the 24×24 viewbox.
- * Black for macOS template images; red for Linux (where color is visible).
+ * Black for macOS template images; red where color is visible.
  */
-function addBadge(svg: string, forTemplate: boolean): string {
-  const color = forTemplate ? '#000000' : '#C4422B';
+function addBadge(svg: string, color: string): string {
   const dot = `<circle cx="19.5" cy="18.5" r="3.5" fill="${color}"/>`;
   return svg.replace('</svg>', `${dot}</svg>`);
 }
@@ -114,20 +115,31 @@ function buildSyncFrame(color: string, angle: number): string {
 const cloudCheck = readSvg('cloud-check');
 const cloud = readSvg('cloud');
 
+/** Rendering context: a stroke color and the badge color to pair with it. */
+interface Palette {
+  stroke: string;
+  badge: string;
+}
+
+const MACOS_PALETTE: Palette = { stroke: '#000000', badge: '#000000' };
+const LINUX_PALETTE: Palette = { stroke: '#555555', badge: '#C4422B' };
+const WIN_WHITE_PALETTE: Palette = { stroke: '#FFFFFF', badge: '#E5484D' }; // dark taskbar
+const WIN_DARK_PALETTE: Palette = { stroke: '#1A1A1A', badge: '#C4422B' }; // light taskbar
+
 interface IconDef {
   name: string;
-  /** Return SVG string for the given rendering context. */
-  svgFn: (forTemplate: boolean) => string;
+  /** Return SVG string for the given palette. */
+  svgFn: (palette: Palette) => string;
 }
 
 const staticIcons: IconDef[] = [
   {
     name: 'idle',
-    svgFn: (t) => setColor(cloudCheck, t ? '#000000' : '#555555'),
+    svgFn: (p) => setColor(cloudCheck, p.stroke),
   },
   {
     name: 'unhealthy',
-    svgFn: (t) => addBadge(shiftUp(setColor(cloud, t ? '#000000' : '#555555'), 2), t),
+    svgFn: (p) => addBadge(shiftUp(setColor(cloud, p.stroke), 2), p.badge),
   },
 ];
 
@@ -139,13 +151,18 @@ interface SizeSpec {
   size: number; // final PNG canvas size
   contentSize: number; // SVG rendered at this size (visual ink area)
   suffix: string;
-  isTemplate: boolean;
+  palette: Palette;
 }
 
 const sizes: SizeSpec[] = [
-  { size: 22, contentSize: 18, suffix: 'Template', isTemplate: true }, // macOS @1x
-  { size: 44, contentSize: 36, suffix: 'Template@2x', isTemplate: true }, // macOS @2x
-  { size: 24, contentSize: 20, suffix: '', isTemplate: false }, // Linux
+  { size: 22, contentSize: 18, suffix: 'Template', palette: MACOS_PALETTE }, // macOS @1x
+  { size: 44, contentSize: 36, suffix: 'Template@2x', palette: MACOS_PALETTE }, // macOS @2x
+  { size: 24, contentSize: 20, suffix: '', palette: LINUX_PALETTE }, // Linux
+  // Windows: "-white" is for dark taskbars, "-dark" for light taskbars
+  { size: 16, contentSize: 14, suffix: '-white', palette: WIN_WHITE_PALETTE },
+  { size: 32, contentSize: 28, suffix: '-white@2x', palette: WIN_WHITE_PALETTE },
+  { size: 16, contentSize: 14, suffix: '-dark', palette: WIN_DARK_PALETTE },
+  { size: 32, contentSize: 28, suffix: '-dark@2x', palette: WIN_DARK_PALETTE },
 ];
 
 // ---------------------------------------------------------------------------
@@ -182,8 +199,8 @@ async function main(): Promise<void> {
   // Static icons (idle, unhealthy)
   for (const icon of staticIcons) {
     console.log(`[${icon.name}]`);
-    for (const { size, contentSize, suffix, isTemplate } of sizes) {
-      const svgStr = icon.svgFn(isTemplate);
+    for (const { size, contentSize, suffix, palette } of sizes) {
+      const svgStr = icon.svgFn(palette);
       const filename = `tray-${icon.name}${suffix}.png`;
       await renderIcon(svgStr, size, contentSize, join(OUTPUT_DIR, filename));
     }
@@ -193,9 +210,8 @@ async function main(): Promise<void> {
   console.log(`[syncing] (${SYNCING_FRAMES} frames)`);
   for (let frame = 0; frame < SYNCING_FRAMES; frame++) {
     const angle = frame * (360 / SYNCING_FRAMES);
-    for (const { size, contentSize, suffix, isTemplate } of sizes) {
-      const color = isTemplate ? '#000000' : '#555555';
-      const svgStr = buildSyncFrame(color, angle);
+    for (const { size, contentSize, suffix, palette } of sizes) {
+      const svgStr = buildSyncFrame(palette.stroke, angle);
       const filename = `tray-syncing-${frame}${suffix}.png`;
       await renderIcon(svgStr, size, contentSize, join(OUTPUT_DIR, filename));
     }

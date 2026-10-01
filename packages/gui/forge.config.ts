@@ -18,7 +18,7 @@ const config: ForgeConfig = {
     appBundleId: 'com.syncthis.desktop',
     appCategoryType: 'public.app-category.productivity',
     icon: './resources/icon',
-    extraResource: ['resources/tray', '../cli/dist'],
+    extraResource: ['resources/tray', 'resources/icon.ico', '../cli/dist'],
     osxSign: process.env.APPLE_TEAM_ID ? {} : undefined,
     osxNotarize: process.env.APPLE_API_KEY_PATH
       ? {
