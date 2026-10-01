@@ -7,8 +7,8 @@
   "private": true,
   "scripts": {
     "premake": "npm run build -w @syncthis/shared && npm run build -w syncthis",
-    "prestart": "pkill -f 'syncthis/node_modules/electron' || true",
-    "predev": "pkill -f 'syncthis/node_modules/electron' || true",
+    "prestart": "node scripts/kill-stale-electron.mjs",
+    "predev": "node scripts/kill-stale-electron.mjs",
     "start": "electron-forge start",
     "dev": "electron-forge start",
     "build": "electron-forge package",
