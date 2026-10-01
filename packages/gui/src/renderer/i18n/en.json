@@ -163,6 +163,7 @@
   "wizard.done_title": "Your folder is syncing",
   "wizard.done_description": "{name} is now syncing every {interval} with {remote}.",
   "wizard.done_hint": "syncthis runs in the background — you can close this window. Look for the icon in your menu bar.",
+  "wizard.done_hint_windows": "syncthis runs in the background — you can close this window. Look for the icon in your notification area. New tray icons start in the ^ overflow flyout; drag the icon onto the taskbar to keep it visible.",
   "wizard.done_button": "Go to overview",
   "wizard.add_another": "Add another folder",
   "wizard.done_service_warning": "Folder set up, but the sync service failed to start. You can start it from the overview.",

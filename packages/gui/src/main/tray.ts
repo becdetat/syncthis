@@ -4,6 +4,7 @@ import { app, BrowserWindow, dialog, Menu, nativeImage, nativeTheme, screen, Tra
 import { determineHealth } from '../../../cli/src/health-check.js';
 import { stopService } from './cli-bridge.js';
 import { readRegistry } from './ipc.js';
+import { placePopover, shouldIgnoreToggle } from './popover-placement.js';
 import { parseTaskbarTheme, type TaskbarTheme } from './taskbar-theme.js';
 import { openDashboard } from './windows.js';
 
@@ -13,6 +14,8 @@ declare const POPOVER_VITE_NAME: string;
 let tray: Tray | null = null;
 let popoverWindow: BrowserWindow | null = null;
 let currentState: 'idle' | 'syncing' | 'unhealthy' = 'idle';
+let lastBlurHideAt: number | null = null;
+let lastClickBounds: Electron.Rectangle | null = null;
 let syncingAnimTimer: ReturnType<typeof setInterval> | null = null;
 
 const SYNCING_FRAMES = 8;
@@ -131,7 +134,8 @@ export function createTray(): void {
     { label: 'Quit', click: () => void quitWithConfirmation() },
   ]);
 
-  tray.on('click', (event) => {
+  tray.on('click', (event, bounds) => {
+    lastClickBounds = bounds;
     if (event.ctrlKey) {
       tray?.popUpContextMenu(contextMenu);
     } else {
@@ -145,6 +149,10 @@ export function createTray(): void {
 }
 
 function togglePopover(): void {
+  // On Windows the tray click that closes the popover blurs it first; without
+  // this guard the toggle would immediately reopen it.
+  if (process.platform === 'win32' && shouldIgnoreToggle(lastBlurHideAt, Date.now())) return;
+
   if (popoverWindow && !popoverWindow.isDestroyed() && popoverWindow.isVisible()) {
     popoverWindow.hide();
     return;
@@ -189,6 +197,8 @@ function createPopoverWindow(): BrowserWindow {
   }
 
   win.on('blur', () => {
+    // Only a blur that actually hid the popover (not one following Escape).
+    if (win.isVisible()) lastBlurHideAt = Date.now();
     win.hide();
   });
 
@@ -204,35 +214,49 @@ function createPopoverWindow(): BrowserWindow {
 function positionPopover(): void {
   if (!tray || !popoverWindow) return;
 
+  const size = popoverWindow.getBounds();
+
+  if (process.platform === 'win32') {
+    const clickBounds = lastClickBounds;
+    lastClickBounds = null;
+    const primary = screen.getPrimaryDisplay();
+    const displays = [primary, ...screen.getAllDisplays().filter((d) => d.id !== primary.id)];
+    const { x, y } = placePopover({
+      trayBounds: clickBounds ?? tray.getBounds(),
+      cursor: screen.getCursorScreenPoint(),
+      size,
+      displays,
+    });
+    popoverWindow.setPosition(x, y, false);
+    return;
+  }
+
   const trayBounds = tray.getBounds();
-  const windowBounds = popoverWindow.getBounds();
 
   // Fallback: if tray bounds are zero/invalid (some Linux DEs), center on primary screen
   if (trayBounds.width === 0 && trayBounds.height === 0) {
     const primary = screen.getPrimaryDisplay();
-    const cx = Math.round(primary.workArea.x + primary.workArea.width / 2 - windowBounds.width / 2);
-    const cy = Math.round(
-      primary.workArea.y + primary.workArea.height / 2 - windowBounds.height / 2,
-    );
+    const cx = Math.round(primary.workArea.x + primary.workArea.width / 2 - size.width / 2);
+    const cy = Math.round(primary.workArea.y + primary.workArea.height / 2 - size.height / 2);
     popoverWindow.setPosition(cx, cy, false);
     return;
   }
 
   const display = screen.getDisplayMatching(trayBounds);
 
-  const x = Math.round(trayBounds.x + trayBounds.width / 2 - windowBounds.width / 2);
+  const x = Math.round(trayBounds.x + trayBounds.width / 2 - size.width / 2);
   const y =
     process.platform === 'darwin'
       ? trayBounds.y + trayBounds.height + 4
-      : trayBounds.y - windowBounds.height - 4;
+      : trayBounds.y - size.height - 4;
 
   const clampedX = Math.max(
     display.workArea.x,
-    Math.min(x, display.workArea.x + display.workArea.width - windowBounds.width),
+    Math.min(x, display.workArea.x + display.workArea.width - size.width),
   );
   const clampedY = Math.max(
     display.workArea.y,
-    Math.min(y, display.workArea.y + display.workArea.height - windowBounds.height),
+    Math.min(y, display.workArea.y + display.workArea.height - size.height),
   );
 
   popoverWindow.setPosition(clampedX, clampedY, false);

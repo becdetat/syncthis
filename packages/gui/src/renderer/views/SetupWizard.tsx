@@ -580,7 +580,9 @@ function DoneStep({
       {!result.serviceStarted && (
         <p className="settings-error-text">{t('wizard.done_service_warning')}</p>
       )}
-      <p className="settings-hint-text">{t('wizard.done_hint')}</p>
+      <p className="settings-hint-text">
+        {t(window.syncthis.platform === 'win32' ? 'wizard.done_hint_windows' : 'wizard.done_hint')}
+      </p>
       <Button variant="ghost" size="xs" onClick={onDone}>
         {t('wizard.done_button')}
       </Button>

@@ -3,6 +3,7 @@ import type { IpcChannels, IpcEvents } from '@syncthis/shared';
 declare global {
   interface Window {
     syncthis: {
+      platform: string;
       invoke: <K extends keyof IpcChannels>(
         channel: K,
         args: IpcChannels[K]['args'],

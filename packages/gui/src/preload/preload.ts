@@ -2,6 +2,8 @@ import type { IpcChannels, IpcEvents } from '@syncthis/shared';
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('syncthis', {
+  platform: process.platform,
+
   invoke: <K extends keyof IpcChannels>(
     channel: K,
     args: IpcChannels[K]['args'],

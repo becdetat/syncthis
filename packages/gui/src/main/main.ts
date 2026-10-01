@@ -9,7 +9,18 @@ import { hideDashboard, openDashboard } from './windows.js';
 
 const _startupTimestamp = Date.now();
 
+// A second launch (e.g. from a Squirrel shortcut) must not create a second tray icon.
+const gotSingleInstanceLock = process.platform !== 'win32' || app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    openDashboard();
+  });
+}
+
 app.on('ready', async () => {
+  if (!gotSingleInstanceLock) return;
   console.log(`[startup] app ready at +${Date.now() - _startupTimestamp}ms`);
 
   if (process.platform === 'darwin') {
@@ -38,6 +49,11 @@ app.on('ready', async () => {
         { role: 'editMenu' },
       ]),
     );
+  }
+
+  if (process.platform === 'win32') {
+    // No menu bar; text-field editing shortcuts still work without one.
+    Menu.setApplicationMenu(null);
   }
 
   try {
