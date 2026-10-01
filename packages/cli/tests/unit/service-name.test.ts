@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { generateServiceName, slugify } from '../../src/daemon/service-name.js';
 
@@ -66,6 +67,24 @@ describe('generateServiceName', () => {
   it('handles a single-segment path like /notes', () => {
     const result = generateServiceName('/notes');
     expect(result).toBe('com.syncthis.notes');
+  });
+
+  it('strips the drive root of a Windows path (D:\\notes)', () => {
+    expect(generateServiceName(String.raw`D:\notes`, undefined, path.win32)).toBe(
+      'com.syncthis.notes',
+    );
+  });
+
+  it('keeps the last two segments of a Windows path', () => {
+    expect(generateServiceName(String.raw`C:\Users\Jo Smith\My Notes`, undefined, path.win32)).toBe(
+      'com.syncthis.jo-smith-my-notes',
+    );
+  });
+
+  it('strips the UNC root of a Windows path', () => {
+    expect(generateServiceName(String.raw`\\server\share\notes`, undefined, path.win32)).toBe(
+      'com.syncthis.notes',
+    );
   });
 
   it('handles very long path segments by slugifying them correctly', () => {

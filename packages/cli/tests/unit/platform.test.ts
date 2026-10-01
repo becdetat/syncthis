@@ -9,9 +9,14 @@ vi.mock('../../src/daemon/systemd.js', () => ({
   SystemdPlatform: vi.fn(),
 }));
 
+vi.mock('../../src/daemon/windows-task.js', () => ({
+  WindowsTaskPlatform: vi.fn(),
+}));
+
 import { LaunchdPlatform } from '../../src/daemon/launchd.js';
 import { getNodeBinDir, getPlatform, getSyncthisBinary } from '../../src/daemon/platform.js';
 import { SystemdPlatform } from '../../src/daemon/systemd.js';
+import { WindowsTaskPlatform } from '../../src/daemon/windows-task.js';
 
 const originalPlatform = process.platform;
 
@@ -33,10 +38,16 @@ describe('getPlatform', () => {
     expect(SystemdPlatform).toHaveBeenCalledOnce();
   });
 
-  it('throws an error on an unsupported platform', () => {
+  it('returns a WindowsTaskPlatform instance on win32', () => {
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    getPlatform();
+    expect(WindowsTaskPlatform).toHaveBeenCalledOnce();
+  });
+
+  it('throws an error on an unsupported platform', () => {
+    Object.defineProperty(process, 'platform', { value: 'freebsd', configurable: true });
     expect(() => getPlatform()).toThrow(
-      "Daemon mode is not supported on win32. Use 'syncthis start' instead.",
+      "Daemon mode is not supported on freebsd. Use 'syncthis start' instead.",
     );
   });
 });

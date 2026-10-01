@@ -1,4 +1,4 @@
-import { resolve, sep } from 'node:path';
+import path from 'node:path';
 
 export function slugify(input: string): string {
   return input
@@ -7,10 +7,16 @@ export function slugify(input: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function generateServiceName(dirPath: string, label?: string): string {
+export function generateServiceName(
+  dirPath: string,
+  label?: string,
+  pathModule: Pick<typeof path, 'resolve' | 'parse' | 'sep'> = path,
+): string {
   if (label) return `com.syncthis.${slugify(label)}`;
-  const resolved = resolve(dirPath);
-  const segments = resolved.split(sep).filter(Boolean);
+  const resolved = pathModule.resolve(dirPath);
+  // Strip the root (`/`, `D:\`, `\\server\share\`) so it never leaks into the name.
+  const relative = resolved.slice(pathModule.parse(resolved).root.length);
+  const segments = relative.split(pathModule.sep).filter(Boolean);
   const lastTwo = segments.slice(-2).join('-');
   return `com.syncthis.${slugify(lastTwo)}`;
 }

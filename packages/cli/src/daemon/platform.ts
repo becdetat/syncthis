@@ -1,6 +1,7 @@
 import { dirname, resolve } from 'node:path';
 import { LaunchdPlatform } from './launchd.js';
 import { SystemdPlatform } from './systemd.js';
+import { WindowsTaskPlatform } from './windows-task.js';
 
 export interface DaemonStatus {
   state: 'running' | 'stopped' | 'not-installed';
@@ -47,6 +48,8 @@ export function getPlatform(): DaemonPlatform {
       return new LaunchdPlatform();
     case 'linux':
       return new SystemdPlatform();
+    case 'win32':
+      return new WindowsTaskPlatform();
     default:
       throw new Error(
         `Daemon mode is not supported on ${process.platform}. Use 'syncthis start' instead.`,

@@ -162,6 +162,10 @@ export async function daemonStart(flags: DaemonFlags): Promise<DaemonStartData> 
     const stderrLog = join(dirPath, '.syncthis', 'logs', 'launchd-stderr.log');
     warning += ` | System log: ${stderrLog} | Hint: macOS may have blocked the background activity. Approve in: System Settings → General → Login Items → Allow in the Background`;
   }
+  if (process.platform === 'win32') {
+    const stdoutLog = join(dirPath, '.syncthis', 'logs', 'task-stdout.log');
+    warning += ` | Task output: ${stdoutLog} | Hint: check the task in Task Scheduler (taskschd.msc) under the SyncThis folder`;
+  }
   return { dirPath, started: false, warning };
 }
 
@@ -180,6 +184,12 @@ export function printDaemonStartResult(result: DaemonStartData): void {
       msg += `\n  System log: ${stderrLog}`;
       msg += '\n\n  Hint: macOS may have blocked the background activity.';
       msg += '\n  Approve it in: System Settings → General → Login Items → Allow in the Background';
+    }
+    if (process.platform === 'win32') {
+      const stdoutLog = join(result.dirPath, '.syncthis', 'logs', 'task-stdout.log');
+      msg += `\n  Task output: ${stdoutLog}`;
+      msg +=
+        '\n\n  Hint: check the task in Task Scheduler (taskschd.msc) under the SyncThis folder.';
     }
     console.warn(msg);
   }
