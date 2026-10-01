@@ -54,10 +54,15 @@ export function getPlatform(): DaemonPlatform {
   }
 }
 
+/**
+ * The GUI's stable launcher shim sets SYNCTHIS_LAUNCHER so services register
+ * it rather than a versioned install path or process.execPath.
+ */
 export function getSyncthisBinary(): string {
-  return resolve(process.argv[1]);
+  return process.env.SYNCTHIS_LAUNCHER || resolve(process.argv[1]);
 }
 
 export function getNodeBinDir(): string {
-  return dirname(process.execPath);
+  const launcher = process.env.SYNCTHIS_LAUNCHER;
+  return launcher ? dirname(launcher) : dirname(process.execPath);
 }

@@ -41,15 +41,15 @@ app.on('ready', async () => {
   }
 
   try {
-    await ensureCliBundled();
-  } catch (err) {
-    console.error('Failed to bundle CLI:', err);
-  }
-
-  try {
     await initGitProvider();
   } catch (err) {
     console.error('Failed to initialize git provider:', err);
+  }
+
+  try {
+    await ensureCliBundled();
+  } catch (err) {
+    console.error('Failed to bundle CLI:', err);
   }
 
   registerIpcHandlers();

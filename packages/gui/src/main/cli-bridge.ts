@@ -1,27 +1,28 @@
 import { execFile } from 'node:child_process';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { JsonOutput } from '@syncthis/shared';
+import { getLauncher } from './cli-bundler.js';
 import { getGitBinDir, getGitEnv, getGitSource } from './git-provider.js';
+import { prependToPath } from './launcher.js';
 
 const execFileAsync = promisify(execFile);
-const CLI_BIN = join(homedir(), '.syncthis', 'bin', 'syncthis');
 
 function buildCliEnv(): NodeJS.ProcessEnv | undefined {
-  if (getGitSource() !== 'bundled') return undefined;
+  const { extraEnv } = getLauncher();
+  if (getGitSource() !== 'bundled') {
+    return Object.keys(extraEnv).length ? { ...process.env, ...extraEnv } : undefined;
+  }
   const gitBinDir = getGitBinDir();
-  return {
-    ...process.env,
-    ...getGitEnv(),
-    SYNCTHIS_GIT_DIR: gitBinDir,
-    PATH: `${gitBinDir}:${process.env.PATH}`,
-  };
+  return prependToPath(
+    { ...process.env, ...extraEnv, ...getGitEnv(), SYNCTHIS_GIT_DIR: gitBinDir },
+    gitBinDir,
+  );
 }
 
 export async function runCli(args: string[]): Promise<JsonOutput> {
   try {
-    const { stdout } = await execFileAsync(CLI_BIN, [...args, '--json'], { env: buildCliEnv() });
+    const { file, args: argv } = getLauncher().invocation(args);
+    const { stdout } = await execFileAsync(file, argv, { env: buildCliEnv() });
     return JSON.parse(stdout) as JsonOutput;
   } catch (err: unknown) {
     const error = err as { stdout?: string; message?: string };
