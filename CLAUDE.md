@@ -35,3 +35,13 @@ So in `resolveFile`: `'local'` → `--ours` → **remote device's version**; `'r
 Do NOT create commits. After successful validation, suggest a Conventional Commit message (english) for the user to use. Keep the subject line concise. Body is optional — only add it when the "why" isn't obvious from the subject.
 
 Examples: `fix: reject unknown CLI flags`, `feat: add status command`, `chore: release v0.2.1`
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`becdetat/syncthis`, via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
