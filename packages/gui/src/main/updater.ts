@@ -2,6 +2,7 @@ import type { UpdateInfo } from '@syncthis/shared';
 import { autoUpdater, BrowserWindow, Notification, net, shell } from 'electron';
 
 import { loadAppSettings } from './app-settings.js';
+import { getReleaseRepo, releaseApiUrl, releasePageUrl, updateFeedUrl } from './release-repo.js';
 
 export type { UpdateInfo };
 
@@ -33,14 +34,14 @@ export function quitAndInstall(): void {
 const notifiedVersions = new Set<string>();
 
 function startMacUpdater(currentVersion: string): void {
-  const feedUrl = `https://update.electronjs.org/mischah/syncthis/${process.platform}-${process.arch}/${currentVersion}`;
+  const feedUrl = updateFeedUrl(getReleaseRepo(), process.platform, process.arch, currentVersion);
   autoUpdater.setFeedURL({ url: feedUrl });
 
   autoUpdater.on('update-downloaded', (_event, _releaseNotes, releaseName) => {
     const version = (releaseName ?? '').replace(/^v/, '') || 'unknown';
     const info: UpdateInfo = {
       version,
-      releaseUrl: `https://github.com/mischah/syncthis/releases/tag/v${version}`,
+      releaseUrl: releasePageUrl(getReleaseRepo(), version),
       publishedAt: new Date().toISOString(),
       downloaded: true,
     };
@@ -68,8 +69,6 @@ function startMacUpdater(currentVersion: string): void {
 // Linux — GitHub API polling (autoUpdater not supported)
 // ---------------------------------------------------------------------------
 
-const GITHUB_RELEASES_URL = 'https://api.github.com/repos/mischah/syncthis/releases/latest';
-
 function compareSemver(a: string, b: string): number {
   const parse = (v: string) => v.split('.').map(Number);
   const [aMaj = 0, aMin = 0, aPat = 0] = parse(a);
@@ -81,7 +80,7 @@ function compareSemver(a: string, b: string): number {
 
 export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo | null> {
   try {
-    const response = await net.fetch(GITHUB_RELEASES_URL, {
+    const response = await net.fetch(releaseApiUrl(getReleaseRepo()), {
       headers: { Accept: 'application/vnd.github.v3+json' },
     });
     if (!response.ok) return null;

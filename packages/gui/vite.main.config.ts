@@ -6,6 +6,9 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       'process.env.GITHUB_CLIENT_ID': JSON.stringify(env.GITHUB_CLIENT_ID ?? ''),
+      'process.env.SYNCTHIS_RELEASE_REPO': JSON.stringify(
+        env.SYNCTHIS_RELEASE_REPO ?? process.env.SYNCTHIS_RELEASE_REPO ?? '',
+      ),
     },
     build: {
       rollupOptions: {
