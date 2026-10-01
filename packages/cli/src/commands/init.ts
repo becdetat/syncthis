@@ -2,6 +2,7 @@ import { access, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import simpleGit from 'simple-git';
 import { createDefaultConfig, writeConfig } from '../config.js';
+import { ensureLongPaths } from '../git-config.js';
 import { type InitData, printJson, printJsonError } from '../json-output.js';
 
 const GITIGNORE_CONTENT = `# syncthis
@@ -122,6 +123,7 @@ async function handleInitRemote(
     }
   }
 
+  await ensureLongPaths(dirPath);
   await writeConfig(dirPath, createDefaultConfig(remote, branch));
 
   const gitignorePath = join(dirPath, '.gitignore');
@@ -189,6 +191,7 @@ async function handleInitClone(
 
   const git = simpleGit();
   await git.clone(cloneUrl, dirPath);
+  await ensureLongPaths(dirPath);
 
   await writeConfig(dirPath, createDefaultConfig(stripCredentials(cloneUrl), branch));
 

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // --- Module mocks (hoisted) ---
 
+vi.mock('../../src/git-config.js', () => ({ ensureLongPaths: vi.fn() }));
 vi.mock('../../src/daemon/platform.js', () => ({
   getNodeBinDir: vi.fn().mockReturnValue('/usr/local/bin'),
   getPlatform: vi.fn(),

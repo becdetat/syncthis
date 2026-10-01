@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const mockGetPlatform = vi.hoisted(() => vi.fn());
+vi.mock('../../src/git-config.js', () => ({ ensureLongPaths: vi.fn() }));
 vi.mock('../../src/daemon/platform.js', () => ({
   getPlatform: mockGetPlatform,
   getNodeBinDir: vi.fn(() => '/usr/local/bin'),

@@ -11,6 +11,7 @@ import {
   getSyncthisBinary,
 } from '../daemon/platform.js';
 import { generateServiceName } from '../daemon/service-name.js';
+import { ensureLongPaths } from '../git-config.js';
 import {
   type BatchData,
   type DaemonStartData,
@@ -85,6 +86,8 @@ export async function daemonStart(flags: DaemonFlags): Promise<DaemonStartData> 
   } catch {
     throw new Error("Not initialized. Run 'syncthis init' first.");
   }
+
+  await ensureLongPaths(dirPath);
 
   const lockStatus = await isLocked(dirPath);
   if (lockStatus.locked) {

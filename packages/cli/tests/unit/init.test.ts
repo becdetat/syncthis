@@ -45,6 +45,8 @@ vi.mock('../../src/json-output.js', () => ({
   printJsonError: mockPrintJsonError,
 }));
 
+vi.mock('../../src/git-config.js', () => ({ ensureLongPaths: vi.fn() }));
+
 import { handleInit } from '../../src/commands/init.js';
 
 // ---------------------------------------------------------------------------
