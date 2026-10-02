@@ -10,12 +10,5 @@ export default defineConfig(({ mode }) => {
         env.SYNCTHIS_RELEASE_REPO ?? process.env.SYNCTHIS_RELEASE_REPO ?? '',
       ),
     },
-    build: {
-      rollupOptions: {
-        // dugite uses __dirname to locate its bundled git binary —
-        // bundling it would break that path resolution
-        external: ['dugite'],
-      },
-    },
   };
 });

@@ -8,17 +8,25 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 
+// Must end in `git` so it lands at resources/git.
+const STAGED_GIT_DIR = '.staging/git';
+
 const { version } = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: { unpack: '**/dugite/git/**' },
     name: 'SyncThis',
     executableName: 'SyncThis',
     appBundleId: 'com.syncthis.desktop',
     appCategoryType: 'public.app-category.productivity',
     icon: './resources/icon',
-    extraResource: ['resources/tray', 'resources/icon.ico', '../cli/dist'],
+    extraResource: [
+      'resources/tray',
+      'resources/icon.ico',
+      '../cli/dist',
+      // Trimmed git from scripts/stage-git.mjs; only Windows has no system git to lean on.
+      ...(process.platform === 'win32' ? [STAGED_GIT_DIR] : []),
+    ],
     osxSign: process.env.APPLE_TEAM_ID ? {} : undefined,
     osxNotarize: process.env.APPLE_API_KEY_PATH
       ? {

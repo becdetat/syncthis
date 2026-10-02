@@ -1,7 +1,7 @@
 import { app, Menu } from 'electron';
 import { loadAppSettings } from './app-settings.js';
 import { ensureCliBundled } from './cli-bundler.js';
-import { initGitProvider } from './git-provider.js';
+import { findBundledGitDir, initGitProvider } from './git-provider.js';
 import { readRegistry, registerIpcHandlers, startHealthPolling } from './ipc.js';
 import { createTray } from './tray.js';
 import { startUpdateChecker } from './updater.js';
@@ -57,7 +57,7 @@ app.on('ready', async () => {
   }
 
   try {
-    await initGitProvider();
+    await initGitProvider(findBundledGitDir(process.resourcesPath, app.getAppPath()));
   } catch (err) {
     console.error('Failed to initialize git provider:', err);
   }

@@ -6,7 +6,7 @@
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
-    "premake": "npm run build -w @syncthis/shared && npm run build -w syncthis",
+    "premake": "npm run build -w @syncthis/shared && npm run build -w syncthis && node scripts/stage-git.mjs",
     "prestart": "node scripts/kill-stale-electron.mjs",
     "predev": "node scripts/kill-stale-electron.mjs",
     "start": "electron-forge start",

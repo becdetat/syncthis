@@ -9,3 +9,5 @@ coverage
 .DS_Store
 demo/*.png
 .env
+
+packages/gui/.staging

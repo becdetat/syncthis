@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { dirname } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import simpleGit, { type SimpleGit } from 'simple-git';
 
@@ -13,7 +14,28 @@ interface GitProviderState {
 
 let state: GitProviderState | null = null;
 
-export async function initGitProvider(): Promise<void> {
+/**
+ * Locates the git directory dugite should use. A packaged build ships a trimmed copy
+ * as `resources/git`; unpackaged runs fall back to dugite's own download in node_modules.
+ * Returns null when neither exists (dugite's bundled-JS default would then be wrong).
+ */
+export function findBundledGitDir(
+  resourcesPath: string,
+  appPath: string,
+  exists: (path: string) => boolean = existsSync,
+): string | null {
+  const packaged = join(resourcesPath, 'git');
+  if (exists(packaged)) return packaged;
+  for (let dir = appPath; ; dir = dirname(dir)) {
+    const candidate = join(dir, 'node_modules', 'dugite', 'git');
+    if (exists(candidate)) return candidate;
+    if (dirname(dir) === dir) return null;
+  }
+}
+
+export async function initGitProvider(
+  bundledGitDir: string | null = process.env.LOCAL_GIT_DIRECTORY ?? null,
+): Promise<void> {
   try {
     await execFileAsync('git', ['--version'], { timeout: 5000 });
     state = { binaryPath: 'git', env: {}, source: 'system' };
@@ -23,6 +45,7 @@ export async function initGitProvider(): Promise<void> {
     // System git not available — fall back to dugite
   }
 
+  if (bundledGitDir) process.env.LOCAL_GIT_DIRECTORY = bundledGitDir;
   const { setupEnvironment } = await import('dugite');
   const result = setupEnvironment({});
   const env: Record<string, string> = {};
@@ -46,6 +69,12 @@ export function getGitBinaryPath(): string {
 export function getGitBinDir(): string {
   if (!state) throw new Error('Git provider not initialized. Call initGitProvider() first.');
   return state.source === 'bundled' ? dirname(state.binaryPath) : '';
+}
+
+/** Root of the bundled git (the dir holding `cmd`, `mingw64`, ...), or '' for system git. */
+export function getGitDir(): string {
+  if (!state) throw new Error('Git provider not initialized. Call initGitProvider() first.');
+  return state.source === 'bundled' ? (state.env.LOCAL_GIT_DIRECTORY ?? '') : '';
 }
 
 export function getGitEnv(): Record<string, string> {
