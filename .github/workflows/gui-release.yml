@@ -15,14 +15,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # electron-winstaller needs Node 22.12+; Windows also ships this node.exe in the app.
+          node-version: ${{ runner.os == 'Windows' && '24' || '20' }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -61,18 +62,43 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_KEY_ISSUER: ${{ secrets.APPLE_API_KEY_ISSUER }}
           APPLE_API_KEY_PATH: ${{ runner.os == 'macOS' && format('{0}/AuthKey_{1}.p8', runner.temp, secrets.APPLE_API_KEY_ID) || '' }}
+          # Unset until Windows signing secrets exist; the build is then unsigned.
+          WINDOWS_CERTIFICATE_FILE: ${{ runner.os == 'Windows' && secrets.WINDOWS_CERTIFICATE_FILE || '' }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ runner.os == 'Windows' && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
         run: npm run make -w packages/gui
 
-      - name: Upload assets to release
+      - name: Resolve release tag
+        id: tag
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.event.release.tag_name }}"
           if [ -z "$TAG" ]; then
-            TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+            TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')
           fi
-          for asset in $(find packages/gui/out/make -type f \( -name "*.dmg" -o -name "*.deb" -o -name "*.zip" \)); do
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload assets to release
+        if: steps.tag.outputs.tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          # RELEASES has no extension; update.electronjs.org needs it, the setup exe and the full nupkg.
+          # Releases must be non-draft and non-prerelease for update.electronjs.org to serve them.
+          find packages/gui/out/make -type f \( -name "*.dmg" -o -name "*.deb" -o -name "*.zip" \
+            -o -name "*.exe" -o -name "*-full.nupkg" -o -name "RELEASES" \) | while read -r asset; do
             name=$(basename "$asset")
             gh release delete-asset "$TAG" "$name" --yes 2>/dev/null || true
             gh release upload "$TAG" "$asset"
           done
+
+      - name: Upload build artifacts
+        if: steps.tag.outputs.tag == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-${{ matrix.os }}
+          path: packages/gui/out/make/**
+          if-no-files-found: error
