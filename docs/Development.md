@@ -29,6 +29,33 @@ npm run test
 npm run lint:fix
 ```
 
+## Windows development
+
+- Install **Node 24** (the Windows build and the bundled `node.exe` use it) and Git for Windows.
+- Renormalise line endings once on existing clones, see [Line endings](#line-endings-windows).
+- To check the Task Scheduler design on a real machine (non-elevated, about 2 minutes, cleans up after itself):
+
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File docs/research/task-scheduler-validate.ps1
+  ```
+
+### Building the Windows installer
+
+Windows installers must be built on Windows; cross-compilation is not supported.
+
+```powershell
+npm install
+npm run make:gui
+```
+
+The output in `packages/gui/out/make/` is `SyncThis-<version>-win32-x64-setup.exe`, `RELEASES` and `SyncThis-<version>-full.nupkg` (don't rename the nupkg; `RELEASES` references it). The `premake` step stages a trimmed copy of dugite's Git into `resources\git`.
+
+### Signing
+
+Signing is optional. When `WINDOWS_CERTIFICATE_FILE` is set (with `WINDOWS_CERTIFICATE_PASSWORD`), the build signs SyncThis's own binaries after packaging; `node.exe` and the bundled Git keep their vendor signatures and are never re-signed. Without these variables the build logs "Windows signing disabled" and produces an **unsigned** installer, which triggers SmartScreen and may be blocked by Smart App Control (see the [README](../README.md#windows-unsigned-releases)). In CI, set the same names as repository secrets.
+
+Releases are built by the `windows-latest` job in `.github/workflows/gui-release.yml`. Use [.github/release-notes-template.md](../.github/release-notes-template.md) for the release notes.
+
 ## Line endings (Windows)
 
 The repo enforces LF via `.gitattributes`. On a Windows clone made before that file existed (or with `core.autocrlf=true`), renormalise once so the working tree matches the index and Biome stops reporting formatter errors:
@@ -82,6 +109,7 @@ syncthis/
 │       │   │   ├── platform.ts  # DaemonPlatform interface + factory
 │       │   │   ├── launchd.ts   # macOS launchd implementation
 │       │   │   ├── systemd.ts   # Linux systemd implementation
+│       │   │   ├── windows-task.ts  # Windows Task Scheduler implementation
 │       │   │   ├── service-name.ts  # Service naming + slugify
 │       │   │   └── templates.ts # Plist / unit file generation
 │       │   ├── json-output.ts   # JSON response types and output helpers

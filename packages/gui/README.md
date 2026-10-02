@@ -3,13 +3,15 @@
 
 # syncthis desktop
 
-syncthis desktop — a tray app for automatic folder sync via Git. Runs as a menu bar (macOS) / system tray (Linux) app with a popover and dashboard window.
+syncthis desktop — a tray app for automatic folder sync via Git. Runs as a menu bar (macOS) / system tray (Linux) / notification area (Windows) app with a popover and dashboard window.
+
+Supported platforms: macOS, Linux and Windows 11 (x64). The packaged app bundles both Node.js and Git, so end users need neither. Windows releases are unsigned for now; see [Windows: unsigned releases](../../README.md#windows-unsigned-releases).
 
 See [syncthis](../../README.md) for the full project overview.
 
 ## Prerequisites
 
-- Node.js ≥ 20
+- Node.js ≥ 20 (Node 24 on Windows)
 - npm
 
 ## Development
@@ -36,7 +38,7 @@ npm run make:gui
 # Output in packages/gui/out/make/
 ```
 
-Cross-compilation is not supported — macOS builds require macOS, Linux builds require Linux.
+Cross-compilation is not supported — macOS builds require macOS, Linux builds require Linux, Windows builds require Windows (output: a Squirrel `SyncThis-<version>-win32-x64-setup.exe`, `RELEASES` and `SyncThis-<version>-full.nupkg`). See [Development](../../docs/Development.md#building-the-windows-installer).
 
 ## Icon Generation
 
@@ -47,9 +49,10 @@ npm run generate:app-icon -w packages/gui
 
 ## Notes
 
-- The app bundles the `syncthis` CLI to `~/.syncthis/bin/syncthis` on first launch.
+- The app bundles the `syncthis` CLI to `~/.syncthis/bin/syncthis` (`syncthis.cmd` on Windows) on first launch.
+- On Windows, background services are Task Scheduler tasks. A crashed service is **not** restarted automatically; it shows as unhealthy and can be restarted with one click.
 - No dock icon is shown when the dashboard is closed; it reappears while the dashboard is open.
-- Closing the dashboard hides it (services keep running). Use the tray context menu → **Quit** to exit.
+- Closing the dashboard hides it (services keep running). Use the tray context menu → **Quit** to exit. On Windows, quitting asks services to stop cooperatively so a sync in progress can finish cleanly.
 
 ## Troubleshooting
 

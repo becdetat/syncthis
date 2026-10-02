@@ -1,6 +1,6 @@
 # CLI Reference
 
-Complete flag reference for all syncthis commands. For a quick overview, run `syncthis --help` or `syncthis <command> --help`.
+Complete flag reference for all syncthis commands. Supported platforms: macOS (launchd), Linux (systemd) and Windows 11 x64 (Task Scheduler). npm users need Node.js ≥ 20 and Git. For a quick overview, run `syncthis --help` or `syncthis <command> --help`.
 
 ---
 
@@ -63,7 +63,7 @@ syncthis start --all
 |------|------|-------------|
 | `--path` | string | Directory to sync. Default: current directory |
 | `--label` | string | Custom service name. Default: derived from directory path |
-| `--enable-autostart` | boolean | Start automatically on login. Default: `false` |
+| `--enable-autostart` | boolean | Start automatically on login (Windows: an "At log on" Task Scheduler trigger). Default: `false` |
 | `--cron` | string | Cron expression. Persisted in the service definition. |
 | `--interval` | number | Interval in seconds. Persisted in the service definition. |
 | `--on-conflict` | string | Conflict strategy: `auto-both`, `auto-newest`, `stop`, `ask`. Default: `auto-both` |
@@ -90,6 +90,8 @@ Use foreground mode to see live output for debugging, or in environments without
 ## `syncthis stop`
 
 Stops the background sync service. The service stays installed and can be restarted with `syncthis start`.
+
+On Windows there are no catchable termination signals, so `stop` writes a `.syncthis/stop-request` file that the service picks up and shuts down cleanly on (releasing the lock, never interrupting git mid-operation). If it hasn't exited after about 15 seconds, the process tree is force-ended.
 
 **Flags:**
 
@@ -157,7 +159,7 @@ Lists all registered syncthis services on the system.
 
 ## `syncthis logs`
 
-Shows the sync log output.
+Shows the sync log output. On Windows, service stdout/stderr are redirected to `task-stdout.log` / `task-stderr.log` in `.syncthis/logs`.
 
 ```bash
 syncthis logs                    # Last 50 lines
@@ -177,7 +179,7 @@ syncthis logs --lines 100        # Last 100 lines
 
 ## `syncthis uninstall`
 
-Stops and completely removes the service from the OS. Your files, `.syncthis.json`, and logs are not deleted.
+Stops and completely removes the service from the OS (launchd agent, systemd unit or Task Scheduler task). Your files, `.syncthis.json`, and logs are not deleted.
 
 **Flags:**
 

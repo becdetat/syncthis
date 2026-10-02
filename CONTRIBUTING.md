@@ -39,7 +39,7 @@ npm install
 
 For project structure, available scripts, and the tech stack, see [docs/Development.md](docs/Development.md).
 
-On Windows, see [Line endings](docs/Development.md#line-endings-windows) for the one-time renormalise of existing clones.
+On Windows, see [Windows development](docs/Development.md#windows-development) (Node 24, building the installer, signing) and [Line endings](docs/Development.md#line-endings-windows) for the one-time renormalise of existing clones.
 
 ## Commit Messages
 

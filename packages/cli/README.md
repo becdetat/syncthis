@@ -44,7 +44,7 @@ When the same file is edited on two devices, syncthis detects the conflict and l
 3. A **private GitHub repository** created for your vault (e.g. `github.com/yourname/my-vault`). See [Creating a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository) — make sure to select **Private**.
 4. **SSH access to GitHub** configured — follow [GitHub's SSH guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) if you haven't done this yet.
 
-**Setup (one-time, takes ~2 minutes).** Open a terminal (macOS: Terminal.app via Spotlight; Linux: Ctrl+Alt+T) and run:
+**Setup (one-time, takes ~2 minutes).** Open a terminal (macOS: Terminal.app via Spotlight; Linux: Ctrl+Alt+T; Windows: Windows Terminal or PowerShell from the Start menu) and run:
 
 ```bash
 # 1. Install syncthis
@@ -96,7 +96,9 @@ npx syncthis init --remote git@github.com:yourname/vault.git
 
 **Requirements:** Node.js ≥ 20.0.0, Git installed and accessible in `PATH`.
 
-**Supported platforms:** macOS (launchd), Linux (systemd).
+**Supported platforms:** macOS (launchd), Linux (systemd), Windows 11 x64 (Task Scheduler).
+
+On Windows, each folder becomes a per-user task in the `\SyncThis\` Task Scheduler folder (no admin rights needed). Tasks run only while you are logged on. A crashed service is not restarted automatically: `syncthis health` reports it as `unhealthy`, and `syncthis start` brings it back. `syncthis stop` asks the service to finish its current sync and exit, and force-ends it after about 15 seconds if it doesn't.
 
 ---
 
@@ -270,7 +272,7 @@ Use `syncthis logs` or `syncthis logs --follow` as a shortcut to read them.
 
 ## Desktop App
 
-A desktop GUI is also available — see the [syncthis repository](https://github.com/mischah/syncthis) for details.
+A desktop GUI for macOS, Linux and Windows 11 is also available — see the [syncthis repository](https://github.com/mischah/syncthis) for details.
 
 ---
 

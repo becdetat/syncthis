@@ -12,6 +12,12 @@ These features are intentionally out of scope for now but may be explored later:
 - **Standalone distribution** — Ship without requiring Node.js:
   - *Stage 1:* Homebrew formula with Node as a dependency (`brew install syncthis`).
   - *Stage 2:* Self-contained binaries via `bun build --compile` or Node SEA, built by GitHub Actions for macOS (arm64 + x64), Linux (x64), and Windows (x64).
-- **Windows service support** — Service mode currently supports macOS (launchd) and Linux (systemd). Windows support could be added via Windows Service Manager or [NSSM](https://nssm.cc).
+- **CLI desktop toasts on Windows** — CLI desktop notifications currently cover macOS and Linux only.
+- **Windows on ARM64** — Windows builds are x64 only.
+- **winget / Microsoft Store** — Distribute the Windows app through a package manager or the Store.
+- **Windows 10 support** — Windows 11 is the baseline; the headless Task Scheduler launch is unverified on Windows 10.
+- **Auto-restart of crashed Windows services** — Task Scheduler's restart-on-failure doesn't work with the hidden launch, so crashed services show as unhealthy instead.
+- **Service restart after update** — Restart running services automatically after the app updates.
+- **Signing upgrades** — Ship signed Windows releases (removing the SmartScreen / Smart App Control caveat) and sign more of the bundle.
 - **Service updates** — When syncthis is updated, existing service definitions may still point to the old binary path. A `syncthis update` command or automatic detection in `syncthis status` could handle this.
 - **Automated releases** — Conventional Commits + `commit-and-tag-version` (or `release-it`) for SemVer tagging, auto-generated `CHANGELOG.md`, and a GitHub Actions workflow that publishes to npm on tag push.

@@ -17,7 +17,7 @@ Keep your files in sync across devices — no manual Git needed. Primary use cas
 
 ## Desktop App
 
-syncthis runs as a tray app that sits in your menu bar. Connect your GitHub account, pick a repository, choose a local folder, and your files stay in sync automatically.
+syncthis runs as a tray app that sits in your menu bar (macOS), system tray (Linux) or notification area (Windows). Connect your GitHub account, pick a repository, choose a local folder, and your files stay in sync automatically.
 
 ![syncthis Tray Popover](docs/images/tray-icon-with-popover.png)
 
@@ -39,7 +39,7 @@ syncthis runs as a tray app that sits in your menu bar. Connect your GitHub acco
 ### Prerequisites
 
 - A [GitHub](https://github.com) account (free)
-- [Git](https://git-scm.com/downloads) installed (CLI only — the desktop app includes Git)
+- [Git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org) ≥ 20 installed (CLI only — the desktop app bundles both)
 
 New to Git? Follow the [Obsidian Setup Guide](docs/obsidian-setup-guide.md) for a step-by-step walkthrough.
 
@@ -51,6 +51,16 @@ Download the latest release from [GitHub Releases](https://github.com/mischah/sy
 |----------|--------|
 | macOS | DMG (arm64 + x64) |
 | Linux | deb |
+| Windows 11 (x64) | Setup `.exe` (per-user, no admin rights needed) |
+
+#### Windows: unsigned releases
+
+Windows releases are currently **not code-signed**. When you run the installer:
+
+- **SmartScreen** may show a "Windows protected your PC" dialog. Click **More info**, then **Run anyway**.
+- **Windows 11 Smart App Control** in enforcement mode may block unsigned installers outright, with no "Run anyway" option. Workaround: turn Smart App Control off (Windows Security → App & browser control → Smart App Control settings; it can't be turned back on without resetting Windows), or wait for a signed release.
+
+Windows 10 and Windows on ARM64 are not supported yet.
 
 ---
 
@@ -79,7 +89,7 @@ On a configurable schedule (default: every 5 minutes), syncthis commits local ch
 - [Obsidian Setup Guide](docs/obsidian-setup-guide.md) — Step-by-step for new users
 - [CLI Reference](docs/CLI-Reference.md) — All commands and flags
 - [Conflict Strategies](docs/Conflict-Strategies.md) — How conflicts are handled
-- [How It Works](docs/How-It-Works.md) — Sync cycle and service lifecycle
+- [How It Works](docs/How-It-Works.md) — Sync cycle and service lifecycle (launchd, systemd, Task Scheduler)
 - [Development](docs/Development.md) — Dev setup and project structure
 
 ---
