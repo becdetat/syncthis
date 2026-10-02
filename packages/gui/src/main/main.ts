@@ -8,16 +8,19 @@ import {
   loginItemSettings,
   parseSquirrelEvent,
   SQUIRREL_APP_USER_MODEL_ID,
+  setSquirrelUninstallHook,
   shouldDelayUpdateCheck,
 } from './squirrel.js';
 import { createTray } from './tray.js';
 import { startUpdateChecker } from './updater.js';
 import { hideDashboard, openDashboard } from './windows.js';
+import { windowsUninstallCleanup } from './windows-uninstall.js';
 
 const _startupTimestamp = Date.now();
 
 // Squirrel lifecycle events must be handled before anything else starts, otherwise
 // the installer/updater launches extra copies of the app.
+setSquirrelUninstallHook(windowsUninstallCleanup);
 const squirrelEvent = process.platform === 'win32' ? parseSquirrelEvent(process.argv) : null;
 const squirrelExit: Promise<boolean> =
   process.platform === 'win32'
