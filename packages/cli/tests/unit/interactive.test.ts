@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveInteractive } from '../../src/conflict/interactive.js';
 import type { Logger } from '../../src/logger.js';
@@ -383,7 +384,11 @@ describe('resolveInteractive', () => {
       'notes/daily.md',
       { index: 0, total: 1, resolved: 0 },
     );
-    expect(mockWriteFile).toHaveBeenCalledWith(`${FAKE_DIR}/notes/daily.md`, 'merged\n', 'utf8');
+    expect(mockWriteFile).toHaveBeenCalledWith(
+      join(FAKE_DIR, 'notes/daily.md'),
+      'merged\n',
+      'utf8',
+    );
     expect(mockGit.raw).not.toHaveBeenCalledWith(['rebase', '--abort']);
     expect(result.status).toBe('resolved');
     expect(result.decisions).toEqual([{ filePath: 'notes/daily.md', choice: 'chunk-by-chunk' }]);

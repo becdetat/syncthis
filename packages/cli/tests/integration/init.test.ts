@@ -1,6 +1,7 @@
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import simpleGit from 'simple-git';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleInit } from '../../src/commands/init.js';
@@ -158,7 +159,7 @@ describe('handleInit --clone', () => {
     await seedGit.commit('initial commit');
     await simpleGit().raw(['clone', '--bare', seedDir, remoteDir]);
 
-    await handleInit({ path: cloneDir, clone: `file://${remoteDir}` });
+    await handleInit({ path: cloneDir, clone: pathToFileURL(remoteDir).href });
 
     // Cloned repo is a valid git repo
     const git = simpleGit(cloneDir);
@@ -167,6 +168,6 @@ describe('handleInit --clone', () => {
     // .syncthis.json exists and records the correct remote
     expect(await fileExists(join(cloneDir, '.syncthis.json'))).toBe(true);
     const config = JSON.parse(await readFile(join(cloneDir, '.syncthis.json'), 'utf8'));
-    expect(config.remote).toBe(`file://${remoteDir}`);
+    expect(config.remote).toBe(pathToFileURL(remoteDir).href);
   });
 });

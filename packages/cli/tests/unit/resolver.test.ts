@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getConflictFiles,
@@ -97,7 +98,7 @@ describe('resolveFile – auto-both', () => {
     await resolveFile(mockGit as never, { filePath: 'note.md' }, 'auto-both', TS, FAKE_DIR);
 
     expect(mockWriteFile).toHaveBeenCalledWith(
-      `${FAKE_DIR}/note.conflict-${TS_STR}.md`,
+      join(FAKE_DIR, `note.conflict-${TS_STR}.md`),
       'remote content',
       'utf8',
     );

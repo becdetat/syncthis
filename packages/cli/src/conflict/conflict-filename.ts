@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+// Git-relative paths always use '/', so build the filename with posix semantics.
 export function formatTimestampForFilename(date: Date): string {
   return date
     .toISOString()
@@ -13,16 +14,16 @@ export function generateConflictFilename(
   existsSync: (p: string) => boolean = () => false,
 ): string {
   const ts = formatTimestampForFilename(timestamp);
-  const ext = path.extname(filePath);
-  const base = path.basename(filePath, ext);
-  const dir = path.dirname(filePath);
+  const ext = path.posix.extname(filePath);
+  const base = path.posix.basename(filePath, ext);
+  const dir = path.posix.dirname(filePath);
 
   const buildPath = (counter: number): string => {
     const suffix = counter > 0 ? `-${counter}` : '';
     if (ext) {
-      return path.join(dir, `${base}.conflict-${ts}${suffix}${ext}`);
+      return path.posix.join(dir, `${base}.conflict-${ts}${suffix}${ext}`);
     }
-    return path.join(dir, `${base}.conflict-${ts}${suffix}`);
+    return path.posix.join(dir, `${base}.conflict-${ts}${suffix}`);
   };
 
   let counter = 0;
