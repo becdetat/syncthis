@@ -53,6 +53,7 @@ import {
   pollOnce,
   requestDeviceCode,
 } from './oauth.js';
+import { loginItemSettings } from './squirrel.js';
 import { updateTrayIcon } from './tray.js';
 import { checkForUpdate, openReleasePage, quitAndInstall } from './updater.js';
 import { hideDashboard, openDashboard } from './windows.js';
@@ -319,8 +320,8 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('app:check-update', async () => {
-    // On macOS the native autoUpdater handles checking; results arrive via events.
-    if (process.platform === 'darwin') return null;
+    // On macOS and Windows the native autoUpdater handles checking; results arrive via events.
+    if (process.platform === 'darwin' || process.platform === 'win32') return null;
     return checkForUpdate(app.getVersion());
   });
 
@@ -388,7 +389,9 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('app:settings-write', async (_, settings: AppSettings): Promise<void> => {
     await saveAppSettings(settings);
-    app.setLoginItemSettings({ openAtLogin: settings.launchOnLogin });
+    app.setLoginItemSettings(
+      loginItemSettings(settings.launchOnLogin, process.platform, app.isPackaged, process.execPath),
+    );
   });
 
   ipcMain.handle('app:linger-status', async (): Promise<{ show: boolean }> => {

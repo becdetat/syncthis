@@ -3,6 +3,8 @@ import { autoUpdater, BrowserWindow, Notification, net, shell } from 'electron';
 
 import { loadAppSettings } from './app-settings.js';
 import { getReleaseRepo, releaseApiUrl, releasePageUrl, updateFeedUrl } from './release-repo.js';
+import { FIRSTRUN_UPDATE_DELAY_MS } from './squirrel.js';
+import { openDashboard } from './windows.js';
 
 export type { UpdateInfo };
 
@@ -27,13 +29,15 @@ export function quitAndInstall(): void {
 }
 
 // ---------------------------------------------------------------------------
-// macOS — native Squirrel auto-updater via update.electronjs.org
+// macOS and Windows — native Squirrel auto-updater via update.electronjs.org
 // ---------------------------------------------------------------------------
 
 /** Versions for which the native notification has already been shown this session. */
 const notifiedVersions = new Set<string>();
 
-function startMacUpdater(currentVersion: string): void {
+const activeNotifications = new Set<Notification>();
+
+function startNativeUpdater(currentVersion: string, delayFirstCheck: boolean): void {
   const feedUrl = updateFeedUrl(getReleaseRepo(), process.platform, process.arch, currentVersion);
   autoUpdater.setFeedURL({ url: feedUrl });
 
@@ -50,10 +54,17 @@ function startMacUpdater(currentVersion: string): void {
 
     if (!notifiedVersions.has(version)) {
       notifiedVersions.add(version);
-      new Notification({
+      const notification = new Notification({
         title: 'syncthis update ready',
         body: `Version ${version} has been downloaded. Restart to update.`,
-      }).show();
+      });
+      activeNotifications.add(notification);
+      notification.on('click', () => {
+        openDashboard();
+        activeNotifications.delete(notification);
+      });
+      notification.on('close', () => activeNotifications.delete(notification));
+      notification.show();
     }
   });
 
@@ -61,7 +72,8 @@ function startMacUpdater(currentVersion: string): void {
     console.error('[updater] autoUpdater error:', err.message);
   });
 
-  autoUpdater.checkForUpdates();
+  // Squirrel.Windows holds a lock shortly after --squirrel-firstrun.
+  setTimeout(() => autoUpdater.checkForUpdates(), delayFirstCheck ? FIRSTRUN_UPDATE_DELAY_MS : 0);
   setInterval(() => autoUpdater.checkForUpdates(), CHECK_INTERVAL_MS);
 }
 
@@ -128,9 +140,9 @@ function startLinuxUpdater(currentVersion: string): void {
 // Public API
 // ---------------------------------------------------------------------------
 
-export function startUpdateChecker(currentVersion: string): void {
-  if (process.platform === 'darwin') {
-    startMacUpdater(currentVersion);
+export function startUpdateChecker(currentVersion: string, delayFirstCheck = false): void {
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    startNativeUpdater(currentVersion, delayFirstCheck);
   } else {
     startLinuxUpdater(currentVersion);
   }

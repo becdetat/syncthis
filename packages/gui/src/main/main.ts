@@ -3,14 +3,39 @@ import { loadAppSettings } from './app-settings.js';
 import { ensureCliBundled } from './cli-bundler.js';
 import { findBundledGitDir, initGitProvider } from './git-provider.js';
 import { readRegistry, registerIpcHandlers, startHealthPolling } from './ipc.js';
+import {
+  handleSquirrelEvent,
+  loginItemSettings,
+  parseSquirrelEvent,
+  SQUIRREL_APP_USER_MODEL_ID,
+  shouldDelayUpdateCheck,
+} from './squirrel.js';
 import { createTray } from './tray.js';
 import { startUpdateChecker } from './updater.js';
 import { hideDashboard, openDashboard } from './windows.js';
 
 const _startupTimestamp = Date.now();
 
+// Squirrel lifecycle events must be handled before anything else starts, otherwise
+// the installer/updater launches extra copies of the app.
+const squirrelEvent = process.platform === 'win32' ? parseSquirrelEvent(process.argv) : null;
+const squirrelExit: Promise<boolean> =
+  process.platform === 'win32'
+    ? handleSquirrelEvent(process.argv, process.execPath).then((exit) => {
+        if (exit) app.quit();
+        return exit;
+      })
+    : Promise.resolve(false);
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId(SQUIRREL_APP_USER_MODEL_ID);
+}
+
 // A second launch (e.g. from a Squirrel shortcut) must not create a second tray icon.
-const gotSingleInstanceLock = process.platform !== 'win32' || app.requestSingleInstanceLock();
+// Lifecycle events that exit straight away must not contend for the lock.
+const isExitingSquirrelEvent = squirrelEvent !== null && squirrelEvent !== 'firstrun';
+const gotSingleInstanceLock =
+  process.platform !== 'win32' || isExitingSquirrelEvent || app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
@@ -21,6 +46,7 @@ if (!gotSingleInstanceLock) {
 
 app.on('ready', async () => {
   if (!gotSingleInstanceLock) return;
+  if (await squirrelExit) return;
   console.log(`[startup] app ready at +${Date.now() - _startupTimestamp}ms`);
 
   if (process.platform === 'darwin') {
@@ -70,7 +96,7 @@ app.on('ready', async () => {
 
   registerIpcHandlers();
   startHealthPolling();
-  startUpdateChecker(app.getVersion());
+  startUpdateChecker(app.getVersion(), shouldDelayUpdateCheck(process.argv));
 
   try {
     createTray();
@@ -80,7 +106,9 @@ app.on('ready', async () => {
   }
 
   const settings = await loadAppSettings();
-  app.setLoginItemSettings({ openAtLogin: settings.launchOnLogin });
+  app.setLoginItemSettings(
+    loginItemSettings(settings.launchOnLogin, process.platform, app.isPackaged, process.execPath),
+  );
 
   // Open dashboard on first launch (no folders registered yet)
   const folders = await readRegistry();
