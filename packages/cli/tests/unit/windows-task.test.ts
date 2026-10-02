@@ -4,7 +4,8 @@ const mockExeca = vi.hoisted(() => vi.fn().mockResolvedValue({ stdout: '', stder
 vi.mock('execa', () => ({ execa: mockExeca }));
 
 const mockIsLocked = vi.hoisted(() => vi.fn().mockResolvedValue({ locked: false }));
-vi.mock('../../src/lock.js', () => ({ isLocked: mockIsLocked }));
+const mockReleaseLock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock('../../src/lock.js', () => ({ isLocked: mockIsLocked, releaseLock: mockReleaseLock }));
 
 const mockWriteFile = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockMkdir = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -13,6 +14,8 @@ vi.mock('node:fs/promises', () => ({
   mkdir: mockMkdir,
   mkdtemp: vi.fn().mockResolvedValue('C:\\tmp\\syncthis-task-x'),
   rm: vi.fn().mockResolvedValue(undefined),
+  unlink: vi.fn().mockResolvedValue(undefined),
+  access: vi.fn().mockRejectedValue(new Error('ENOENT')),
 }));
 
 import {
@@ -270,6 +273,58 @@ describe('WindowsTaskPlatform', () => {
     it('is stopped when there is no live lock', async () => {
       mockExeca.mockResolvedValue({ stdout: taskXml });
       expect(await platform.status('com.syncthis.notes')).toEqual({ state: 'stopped' });
+    });
+  });
+
+  describe('stop', () => {
+    const fast = new WindowsTaskPlatform(undefined, { timeoutMs: 30, pollMs: 5 });
+    const calls = () => mockExeca.mock.calls.map((c) => [c[0], ...(c[1] as string[])].join(' '));
+
+    beforeEach(() => {
+      mockExeca.mockReset();
+      mockExeca.mockResolvedValue({ stdout: taskXml });
+      mockIsLocked.mockReset();
+      mockReleaseLock.mockClear();
+      mockWriteFile.mockClear();
+    });
+
+    it('stops cooperatively without taskkill when the process exits', async () => {
+      mockIsLocked
+        .mockResolvedValueOnce({ locked: true, pid: 4242 })
+        .mockResolvedValue({ locked: false });
+      await fast.stop('com.syncthis.notes');
+      expect(mockWriteFile).toHaveBeenCalledWith(
+        expect.stringContaining('stop-request'),
+        expect.any(String),
+        'utf8',
+      );
+      expect(calls().some((c) => c.startsWith('taskkill'))).toBe(false);
+      expect(calls().some((c) => c.includes('schtasks /end'))).toBe(true);
+    });
+
+    it('falls back to taskkill /T /F on timeout and clears the stale lock', async () => {
+      mockIsLocked.mockResolvedValue({ locked: true, pid: 4242 });
+      await fast.stop('com.syncthis.notes');
+      expect(calls()).toContain('taskkill /PID 4242 /T /F');
+      expect(mockReleaseLock).toHaveBeenCalledWith(String.raw`D:\notes`);
+      expect(calls().at(-1)).toContain('schtasks /end');
+    });
+
+    it('still settles when taskkill and schtasks /end fail', async () => {
+      mockIsLocked.mockResolvedValue({ locked: true, pid: 4242 });
+      mockExeca.mockImplementation(async (cmd: string, args: string[]) => {
+        if (cmd === 'taskkill' || args.includes('/end')) throw new Error('nope');
+        return { stdout: taskXml };
+      });
+      await expect(fast.stop('com.syncthis.notes')).resolves.toBeUndefined();
+      expect(mockReleaseLock).toHaveBeenCalled();
+    });
+
+    it('skips the stop request when nothing holds the lock', async () => {
+      mockIsLocked.mockResolvedValue({ locked: false });
+      await fast.stop('com.syncthis.notes');
+      expect(mockWriteFile).not.toHaveBeenCalled();
+      expect(calls().some((c) => c.startsWith('taskkill'))).toBe(false);
     });
   });
 

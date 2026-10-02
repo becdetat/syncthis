@@ -7,6 +7,7 @@ import { type BatchData, printJson, printJsonError } from '../json-output.js';
 import { acquireLock, readLockFile, releaseLock } from '../lock.js';
 import { createLogger, type LogLevel } from '../logger.js';
 import { type SchedulerHandle, startScheduler } from '../scheduler.js';
+import { clearStopRequest, watchStopRequest } from '../stop-request.js';
 import { runSyncCycle } from '../sync.js';
 import type { BatchResult } from './daemon.js';
 
@@ -165,6 +166,9 @@ async function runForeground(flags: StartFlags): Promise<void> {
     process.exit(1);
   }
 
+  // A stale request from a previous run must not stop this one
+  await clearStopRequest(dirPath);
+
   const lockData = await readLockFile(dirPath);
   const startedAt = lockData?.startedAt ?? new Date().toISOString();
 
@@ -189,6 +193,13 @@ async function runForeground(flags: StartFlags): Promise<void> {
   process.on('SIGTERM', () => {
     void gracefulShutdown();
   });
+
+  // Windows has no catchable SIGTERM: `syncthis stop` writes .syncthis/stop-request instead
+  if (process.platform === 'win32') {
+    watchStopRequest(dirPath, () => {
+      void gracefulShutdown();
+    });
+  }
 
   logger.info(`Sync started. Schedule: ${schedule}. Watching: ${dirPath}`);
 

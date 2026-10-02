@@ -3,6 +3,7 @@ import { tmpdir, userInfo } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { execa } from 'execa';
 import { isLocked } from '../lock.js';
+import { type StopOptions, stopLockedProcess } from '../stop-request.js';
 import type { DaemonConfig, DaemonInfo, DaemonPlatform, DaemonStatus } from './platform.js';
 
 const DEFAULT_TASK_FOLDER = '\\SyncThis';
@@ -179,7 +180,10 @@ function currentUser(): string {
 }
 
 export class WindowsTaskPlatform implements DaemonPlatform {
-  constructor(private readonly taskFolder: string = DEFAULT_TASK_FOLDER) {}
+  constructor(
+    private readonly taskFolder: string = DEFAULT_TASK_FOLDER,
+    private readonly stopOptions: StopOptions = {},
+  ) {}
 
   private taskName(serviceName: string): string {
     return `${this.taskFolder}\\${serviceName}`;
@@ -235,8 +239,21 @@ export class WindowsTaskPlatform implements DaemonPlatform {
     await execa('schtasks', ['/run', '/tn', this.taskName(serviceName)]);
   }
 
-  async stop(_serviceName: string): Promise<void> {
-    throw new Error('Stopping a Windows service is not implemented yet.');
+  async stop(serviceName: string): Promise<void> {
+    // schtasks /end is a hard TerminateProcess of the task's root process only, leaving node.exe
+    // orphaned, so ask the process to stop itself first and kill its tree only as a fallback.
+    let dirPath = '';
+    try {
+      dirPath = parseTaskXml(await this.queryXml(serviceName)).dirPath;
+    } catch {
+      // task XML not readable: nothing to stop cooperatively
+    }
+    if (dirPath !== '') await stopLockedProcess(dirPath, this.stopOptions);
+    try {
+      await execa('schtasks', ['/end', '/tn', this.taskName(serviceName)]);
+    } catch {
+      // task not running: state already settled
+    }
   }
 
   async status(serviceName: string): Promise<DaemonStatus> {

@@ -26,6 +26,10 @@ vi.mock('../../src/lock.js', () => ({
   releaseLock: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../src/stop-request.js', () => ({
+  stopLockedProcess: vi.fn().mockResolvedValue('graceful'),
+}));
+
 import {
   daemonLogs,
   daemonStart,
@@ -37,6 +41,7 @@ import { loadConfig, writeConfig } from '../../src/config.js';
 import type { DaemonInfo, DaemonPlatform, DaemonStatus } from '../../src/daemon/platform.js';
 import { getPlatform } from '../../src/daemon/platform.js';
 import { isLocked, releaseLock } from '../../src/lock.js';
+import { stopLockedProcess } from '../../src/stop-request.js';
 
 const mockGetPlatform = vi.mocked(getPlatform);
 const mockLoadConfig = vi.mocked(loadConfig);
@@ -306,8 +311,14 @@ describe('daemonStop', () => {
 
     await daemonStop({ path: tempDir });
 
-    expect(killSpy).toHaveBeenCalledWith(16140, 'SIGTERM');
-    expect(mockReleaseLock).toHaveBeenCalledWith(tempDir);
+    if (process.platform === 'win32') {
+      // no catchable SIGTERM on Windows: uses the cooperative stop-request path
+      expect(killSpy).not.toHaveBeenCalled();
+      expect(stopLockedProcess).toHaveBeenCalledWith(tempDir);
+    } else {
+      expect(killSpy).toHaveBeenCalledWith(16140, 'SIGTERM');
+      expect(mockReleaseLock).toHaveBeenCalledWith(tempDir);
+    }
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Foreground process stopped'));
   });
 

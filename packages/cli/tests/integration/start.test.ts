@@ -4,12 +4,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { writeStopRequest } from '../../src/stop-request.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// tsx is hoisted to the workspace root node_modules
-const TSX_BIN = join(__dirname, '../../../../node_modules/.bin/tsx');
 const CLI_PATH = join(__dirname, '../../src/cli.ts');
 
 const GIT_ENV = {
@@ -78,16 +77,24 @@ describe('handleStart integration', () => {
     await writeFile(join(workDir, 'note.md'), '# My Note\n', 'utf8');
 
     // Start the sync process as a subprocess via tsx
-    const proc = execa(TSX_BIN, [CLI_PATH, 'start', '--foreground', '--path', workDir], {
-      env: { ...process.env, ...GIT_ENV },
-      reject: false,
-    });
+    const proc = execa(
+      process.execPath,
+      ['--import', 'tsx', CLI_PATH, 'start', '--foreground', '--path', workDir],
+      {
+        env: { ...process.env, ...GIT_ENV },
+        reject: false,
+      },
+    );
 
     // Wait for subprocess startup + initial sync cycle (tsx may take a few seconds to load)
     await new Promise<void>((resolve) => setTimeout(resolve, 8000));
 
-    // Trigger graceful shutdown
-    proc.kill('SIGTERM');
+    // Trigger graceful shutdown (Windows has no catchable SIGTERM: use the stop-request)
+    if (process.platform === 'win32') {
+      await writeStopRequest(workDir);
+    } else {
+      proc.kill('SIGTERM');
+    }
 
     // Wait for process to finish
     await proc;

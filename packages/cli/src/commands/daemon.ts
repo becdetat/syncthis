@@ -20,6 +20,8 @@ import {
   printJson,
 } from '../json-output.js';
 import { isLocked, releaseLock } from '../lock.js';
+import { followFile } from '../log-follow.js';
+import { stopLockedProcess } from '../stop-request.js';
 
 export interface DaemonFlags {
   path: string;
@@ -245,8 +247,12 @@ export async function daemonStop(flags: DaemonFlags): Promise<void> {
   if (currentStatus.state === 'not-installed') {
     const lockStatus = await isLocked(dirPath);
     if (lockStatus.locked && lockStatus.pid !== undefined) {
-      process.kill(lockStatus.pid, 'SIGTERM');
-      await releaseLock(dirPath);
+      if (process.platform === 'win32') {
+        await stopLockedProcess(dirPath);
+      } else {
+        process.kill(lockStatus.pid, 'SIGTERM');
+        await releaseLock(dirPath);
+      }
       if (flags.json) {
         printJson('stop', {
           dirPath,
@@ -449,6 +455,22 @@ export async function daemonUninstall(flags: DaemonFlags): Promise<void> {
 export async function daemonLogs(flags: DaemonFlags): Promise<void> {
   const dirPath = flags.path;
   const logPath = join(dirPath, '.syncthis', 'logs', 'syncthis.log');
+
+  if (flags.follow && process.platform === 'win32') {
+    const controller = new AbortController();
+    process.on('SIGINT', () => controller.abort());
+    try {
+      await followFile(logPath, {
+        lines: flags.lines ?? 50,
+        write: (text) => process.stdout.write(text),
+        signal: controller.signal,
+      });
+    } catch {
+      console.error(`Error: No log file found at ${logPath}`);
+      process.exit(1);
+    }
+    return;
+  }
 
   if (flags.follow) {
     const child = spawn('tail', ['-f', logPath], { stdio: 'inherit' });
